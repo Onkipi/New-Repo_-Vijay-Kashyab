@@ -1,0 +1,57 @@
+import pyautogui
+import time
+import pyperclip  # Necessary for Tamil Unicode support
+import os
+
+# FAIL-SAFE: Move mouse to top-left corner to kill the script
+pyautogui.FAILSAFE = True
+
+def get_tamil_news_brief():
+    # 1. Preparation
+    print("Script starting in 5 seconds... Switch to your Browser.")
+    time.sleep(5)
+
+    try:
+        # 2. Open the Website
+        # Using Mac shortcut Cmd+L (use 'ctrl' if on Windows)
+        pyautogui.hotkey('command', 'l') 
+        pyautogui.write('https://www.dailythanthi.com/', interval=0.05)
+        pyautogui.press('enter')
+        
+        # Wait for heavy Tamil fonts and images to load
+        print("Waiting for page to load...")
+        time.sleep(8)
+
+        # 3. Targeted Extraction
+        # We scroll down a bit to reach the main headlines
+        pyautogui.scroll(-10) 
+        
+        # Select All and Copy
+        pyautogui.hotkey('command', 'a')
+        time.sleep(1)
+        pyautogui.hotkey('command', 'c')
+        time.sleep(1)
+        
+        # 4. Processing Tamil Text
+        raw_text = pyperclip.paste()
+        
+        # Filter for actual news sentences (ignoring short menu items)
+        news_lines = [line.strip() for line in raw_text.split('\n') if len(line.strip()) > 30]
+        brief = news_lines[:10] # Take the top 5 news segments
+
+        # 5. Output to File
+        with open("News_Brief.txt", "w", encoding="utf-8") as f:
+            f.write(f"NEWS BRIEF - {time.ctime()}\n")
+            f.write("="*30 + "\n")
+            for item in brief:
+                f.write(f"• {item}\n\n")
+        
+        print("Success! File saved as 'Tamil_News_Brief.txt'")
+        pyautogui.alert("Your Tamil News Brief is ready!")
+
+    except Exception as e:
+        print(f"An error occurred: {e}")
+
+if __name__ == "__main__":
+    # ONLY call the function defined in this script
+    get_tamil_news_brief()
