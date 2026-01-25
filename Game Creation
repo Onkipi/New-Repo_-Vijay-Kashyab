@@ -1,0 +1,117 @@
+import pygame
+import random
+import sys
+
+# --- CONFIGURATION ---
+WIDTH, HEIGHT = 800, 600
+PITCH_COLOR = (34, 139, 34)  # Grass Green
+CREASE_COLOR = (255, 255, 255)
+BALL_COLOR = (200, 0, 0)
+BATSMAN_COLOR = (0, 0, 200)
+
+class CricketGame:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+        pygame.display.set_caption("Python Premier League (PPL)")
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont("Verdana", 24, bold=True)
+        
+        # Game State
+        self.score = 0
+        self.wickets = 0
+        self.game_active = True
+        self.feedback = "Press SPACE to Hit!"
+        
+        # Ball Properties
+        self.ball_x = WIDTH // 2
+        self.ball_y = 50
+        self.ball_speed = 7
+        self.ball_active = False
+        
+        # Batting Zone (Y-coordinate range)
+        self.hit_zone = range(480, 550) 
+        self.perfect_timing = 515
+
+    def reset_ball(self):
+        self.ball_y = 50
+        self.ball_speed = random.randint(7, 14) # Randomize delivery speed
+        self.ball_active = True
+
+    def check_hit(self):
+        if not self.ball_active: return
+
+        # Check if ball is in the hitting area
+        if self.ball_y in self.hit_zone:
+            accuracy = abs(self.ball_y - self.perfect_timing)
+            if accuracy < 10:
+                runs = 6
+                self.feedback = "SIXER! Perfect Timing!"
+            elif accuracy < 25:
+                runs = 4
+                self.feedback = "FOUR! Good Shot."
+            else:
+                runs = 1
+                self.feedback = "Single. Poor timing."
+            
+            self.score += runs
+            self.ball_active = False
+        else:
+            self.wickets += 1
+            self.feedback = "OUT! Missed it completely."
+            self.ball_active = False
+
+    def draw(self):
+        self.screen.fill(PITCH_COLOR)
+        
+        # Draw Pitch
+        pygame.draw.rect(self.screen, (210, 180, 140), (WIDTH//2 - 60, 0, 120, HEIGHT)) # Dirt track
+        pygame.draw.line(self.screen, CREASE_COLOR, (WIDTH//2 - 60, 520), (WIDTH//2 + 60, 520), 5) # Crease
+        
+        # Draw Wickets
+        for i in range(-15, 20, 15):
+            pygame.draw.rect(self.screen, (255, 255, 0), (WIDTH//2 + i, 530, 5, 20))
+
+        # Draw Ball
+        if self.ball_active:
+            pygame.draw.circle(self.screen, BALL_COLOR, (self.ball_x, int(self.ball_y)), 10)
+
+        # Draw UI
+        score_text = self.font.render(f"Score: {self.score} | Wickets: {self.wickets}", True, (255, 255, 255))
+        feed_text = self.font.render(self.feedback, True, (255, 255, 0))
+        self.screen.blit(score_text, (20, 20))
+        self.screen.blit(feed_text, (WIDTH//2 - 100, 100))
+
+    def run(self):
+        while self.game_active:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    pygame.quit()
+                    sys.exit()
+                
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        if not self.ball_active:
+                            self.reset_ball()
+                        else:
+                            self.check_hit()
+
+            # Ball Physics
+            if self.ball_active:
+                self.ball_y += self.ball_speed
+                if self.ball_y > HEIGHT:
+                    self.wickets += 1
+                    self.feedback = "BOWLED! Too slow!"
+                    self.ball_active = False
+
+            if self.wickets >= 3:
+                self.game_active = False
+
+            self.draw()
+            pygame.display.flip()
+            self.clock.tick(60)
+
+        print(f"Game Over! Final Score: {self.score}")
+
+if __name__ == "__main__":
+    CricketGame().run
