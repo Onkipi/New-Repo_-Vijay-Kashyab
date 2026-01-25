@@ -1,0 +1,65 @@
+import time
+from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
+from selenium.webdriver.chrome.options import Options
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from webdriver_manager.chrome import ChromeDriverManager
+
+# 1. Setup Chrome Options
+chrome_options = Options()
+# chrome_options.add_argument("--headless")  # Uncomment to run without a browser window
+
+# 2. Initialize Driver
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=chrome_options)
+wait = WebDriverWait(driver, 10)
+
+try:
+    # --- STEP 1: Load Website ---
+    driver.get("https://www.demoblaze.com/")
+    driver.maximize_window()
+    print("Navigation: Website Loaded")
+
+    # --- STEP 2: Select a Category (Laptops) ---
+    laptop_cat = wait.until(EC.element_to_be_clickable((By.LINK_TEXT, "Laptops")))
+    laptop_cat.click()
+    print("Action: Clicked on Laptops category")
+
+    # --- STEP 3: Select a Product (MacBook Air) ---
+    # We wait for the product list to refresh after clicking the category
+    product_link = wait.until(EC.element_to_be_clickable((By.LINK_TEXT, "MacBook air")))
+    product_link.click()
+    print("Action: Selected MacBook Air")
+
+    # --- STEP 4: Add to Cart ---
+    add_to_cart_btn = wait.until(EC.element_to_be_clickable((By.XPATH, "//a[text()='Add to cart']")))
+    add_to_cart_btn.click()
+    print("Action: Clicked Add to Cart")
+
+    # --- STEP 5: Handle JavaScript Alert ---
+    wait.until(EC.alert_is_present())
+    alert = driver.switch_to.alert
+    print(f"Alert Found: {alert.text}")
+    alert.accept()
+
+    # --- STEP 6: Verify Cart ---
+    driver.find_element(By.ID, "cartur").click()
+    print("Navigation: Moved to Cart page")
+
+    # Verify if the item is present in the table
+    item_in_cart = wait.until(EC.presence_of_element_located((By.XPATH, "//td[text()='MacBook air']")))
+    
+    if item_in_cart.is_displayed():
+        print("TEST PASSED: Product successfully added to cart.")
+    else:
+        print("TEST FAILED: Product not found in cart.")
+
+except Exception as e:
+    print(f"TEST ERRORED: {str(e)}")
+    driver.save_screenshot("test_failure.png")
+
+finally:
+    time.sleep(2) # Brief pause to see the result
+    driver.quit()
+    print("Browser Closed.")
