@@ -1,0 +1,40 @@
+import pandas as pd
+from playwright.sync_api import sync_playwright
+
+def scrape_and_save():
+    with sync_playwright() as p:
+        browser = p.chromium.launch(headless=True)
+        page = browser.new_page()
+        
+        # Example: Scraping a demo site
+        page.goto("https://www.scrapethissite.com/pages/forms/")
+        page.wait_for_selector(".team")
+
+        # Collect data into a list of dictionaries
+        scraped_data = []
+        teams = page.locator(".team").all()
+
+        for team in teams:
+            scraped_data.append({
+                "Team Name": team.locator(".name").inner_text().strip(),
+                "Year": team.locator(".year").inner_text().strip(),
+                "Wins": team.locator(".wins").inner_text().strip(),
+                "Losses": team.locator(".losses").inner_text().strip()
+            })
+
+        # --- THE PANDAS MAGIC ---
+        # 1. Convert the list to a DataFrame (Table format)
+        df = pd.DataFrame(scraped_data)
+
+        # 2. Save to CSV
+        df.to_csv("hockey_stats.csv", index=False)
+        
+        # 3. Save to Excel
+        df.to_excel("hockey_stats.xlsx", index=False)
+
+        print(f"Successfully saved {len(df)} rows to CSV and Excel!")
+        
+        browser.close()
+
+if __name__ == "__main__":
+    scrape_and_save()
