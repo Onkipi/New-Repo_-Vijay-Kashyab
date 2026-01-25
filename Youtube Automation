@@ -1,0 +1,130 @@
+import asyncio
+import threading
+from datetime import datetime
+from flask import Flask, request, jsonify
+from playwright.async_api import async_playwright
+# Using the standard stealth import
+from playwright_stealth import stealth as stealth_func
+
+app = Flask(__name__)
+
+def get_timestamp():
+    return datetime.now().strftime("%Y-%m-%d %H:%M:%S") 
+
+async def skip_ads_logic(page):
+    """Background task that looks for and clicks 'Skip Ad' buttons."""
+    print(f"[{get_timestamp()}] >>> [SYSTEM] Ad-skip monitor started.")
+    while True:
+        try:
+            # Common selectors for YouTube skip buttons
+            skip_button = page.locator(".ytp-ad-skip-button, .ytp-ad-skip-button-modern")
+            if await skip_button.is_visible():
+                print(f"[{get_timestamp()}] >>> [ACTION] Ad detected! Clicking Skip button...")
+                await skip_button.click()
+                print(f"[{get_timestamp()}] >>> [SUCCESS] Ad skipped successfully.")
+        except Exception as e:
+            # Silent fail for ad skip to avoid spamming logs
+            pass
+        await asyncio.sleep(2) 
+
+async def play_video_sequence(video_urls):
+    print(f"[{get_timestamp()}] >>> [STEP 3] Entering Playwright sequence.")
+    async with async_playwright() as p:
+        print(f"[{get_timestamp()}] >>> [ACTION] Launching official Google Chrome...")
+        
+        # Updated to use the Chrome channel
+        browser = await p.chromium.launch(headless=False, channel="chrome")
+        
+        context = await browser.new_context()
+        page = await context.new_page()
+        
+        print(f"[{get_timestamp()}] >>> [ACTION] Applying Stealth Mode.")
+        try:
+            # Use the alias we created in the import section
+            await stealth_func(page) 
+            print(f"[{get_timestamp()}] >>> [SUCCESS] Stealth Mode Applied.")
+        except Exception as e:
+            print(f"[{get_timestamp()}] >>> [WARNING] Stealth failed, continuing without it: {e}")
+
+        # Start the ad-skipping task in the background
+        ad_task = asyncio.create_task(skip_ads_logic(page))
+
+        for index, url in enumerate(video_urls):
+            print(f"\n[{get_timestamp()}] >>> [VIDEO {index+1}] Navigating to: {url}")
+            try:
+                await page.goto(url, wait_until="load")
+                print(f"[{get_timestamp()}] >>> [SUCCESS] Page loaded.")
+
+                # Handle initial consent/cookies
+                print(f"[{get_timestamp()}] >>> [ACTION] Checking for 'Accept All' cookie prompts...")
+                try:
+                    accept_btn = page.get_by_role("button", name="Accept all")
+                    if await accept_btn.is_visible(timeout=3000):
+                        await accept_btn.click()
+                        print(f"[{get_timestamp()}] >>> [SUCCESS] Cookie prompt cleared.")
+                except:
+                    print(f"[{get_timestamp()}] >>> [INFO] No cookie prompt found.")
+
+                # Wait for video to load and force Play/Unmute
+                print(f"[{get_timestamp()}] >>> [ACTION] Waiting for Video Element...")
+                await page.wait_for_selector("video")
+                
+                print(f"[{get_timestamp()}] >>> [ACTION] Sending 'K' (Play) and 'M' (Unmute) keys...")
+                await page.keyboard.press("k") 
+                await page.keyboard.press("m") 
+
+                # Get duration and wait for video to finish
+                duration = await page.evaluate("document.querySelector('video').duration")
+                if duration and duration > 0:
+                    wait_time = int(duration)
+                    print(f"[{get_timestamp()}] >>> [INFO] Video Length detected: {wait_time} seconds. Playing until end...")
+                    await asyncio.sleep(wait_time)
+                else:
+                    print(f"[{get_timestamp()}] >>> [WARNING] Could not detect duration. Waiting 30 seconds (fallback).")
+                    await asyncio.sleep(30)
+
+            except Exception as e:
+                print(f"[{get_timestamp()}] >>> [ERROR] Failed to play {url}: {e}")
+                continue
+        
+        print(f"\n[{get_timestamp()}] >>> [STEP 4] All videos finished. Closing browser.")
+        ad_task.cancel() 
+        await browser.close()
+
+def run_async_loop(urls):
+    """Runs the Playwright async logic inside a standard Python thread."""
+    print(f"[{get_timestamp()}] >>> [STEP 2] Background thread started. Creating Event Loop.")
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        loop.run_until_complete(play_video_sequence(urls))
+    finally:
+        loop.close()
+        print(f"[{get_timestamp()}] >>> [INFO] Event Loop closed.")
+
+@app.route('/api/watch', methods=['POST'])
+def watch_videos():
+    print(f"\n[{get_timestamp()}] >>> [STEP 1] API Request received at /api/watch")
+    
+    data = request.get_json()
+    
+    # Corrected the logic to extract URLs properly
+    urls = data.get('urls', [])
+
+    if not urls or not isinstance(urls, list):
+        print(f"[{get_timestamp()}] >>> [ERROR] Invalid URL list provided in request.")
+        return jsonify({"error": "Please provide a JSON list of 'urls'"}), 400
+
+    print(f"[{get_timestamp()}] >>> [INFO] Validated {len(urls)} URLs. Spawning worker thread...")
+
+    # Execute in background thread
+    threading.Thread(target=run_async_loop, args=(urls,), daemon=True).start()
+
+    return jsonify({
+        "status": "Started",
+        "message": f"Processing {len(urls)} videos. Check your VS Code console for logs."
+    }), 200
+
+if __name__ == '__main__':
+    print(f"[{get_timestamp()}] >>> [START] Flask Server starting on port 5000...")
+    app.run(debug=True, port=5000, use_reloader=False)
