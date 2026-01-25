@@ -1,0 +1,55 @@
+import openai
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
+openai.api_key = os.getenv("OPENAI_API_KEY")
+
+INDUSTRY_PROMPTS = {
+    "Medical": "Focus on EHR integration, telemedicine, and AI-driven diagnostics.",
+    "Telecom": "Focus on 5G rollout, BSS/OSS transformation, and network automation.",
+    "IT": "Focus on Cloud migration, DevOps, and Cybersecurity frameworks.",
+    "Agriculture": "Focus on IoT sensors, Precision Farming, and supply chain transparency.",
+    "Small Scale": "Focus on cost-effective ERPs, digital payments, and social media marketing."
+}
+
+def get_consulting_suggestion(industry, user_query):
+    context = INDUSTRY_PROMPTS.get(industry, "general business digital transformation")
+    
+    prompt = f"You are a Senior Digital Transformation Consultant. \
+               Industry: {industry}. Context: {context}. \
+               User Question: {user_query} \
+               Provide a concise, actionable 3-step digital roadmap."
+
+    response = openai.ChatCompletion.create(
+        model="gpt-3.5-turbo",
+        messages=[{"role": "user", "content": prompt}]
+    )
+    
+    return response.choices[0].message.content
+
+from flask import Flask, request, jsonify
+from chatbot_logic import get_consulting_suggestion
+
+app = Flask(__name__)
+
+@app.route('/chat', methods=['POST'])
+def chat():
+    data = request.json
+    industry = data.get('industry')
+    query = data.get('query')
+
+    if not industry or not query:
+        return jsonify({"error": "Missing industry or query"}), 400
+
+    try:
+        suggestion = get_consulting_suggestion(industry, query)
+        return jsonify({
+            "industry": industry,
+            "suggestion": suggestion
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)
