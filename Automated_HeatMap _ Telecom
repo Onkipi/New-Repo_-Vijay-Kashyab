@@ -1,0 +1,30 @@
+import pandas as pd
+import seaborn as sns
+import matplotlib.pyplot as plt
+
+# 1. Representative Data: Chennai Areas and Telecom Providers
+# Values represent user counts in thousands (Dummy Data)
+data = {
+    'Area': ['Anna Nagar', 'Adyar', 'OMR/Sholinganallur', 'Velachery', 'Tambaram', 
+             'Nungambakkam', 'Mylapore', 'Ambattur', 'T.Nagar', 'Porur'],
+    'Jio': [85, 70, 150, 95, 110, 60, 55, 120, 80, 90],
+    'Airtel': [90, 85, 130, 88, 95, 75, 70, 80, 95, 70],
+    'Vi': [40, 35, 60, 45, 50, 40, 30, 55, 50, 45],
+    'BSNL': [25, 20, 15, 20, 35, 15, 25, 40, 20, 30]
+}
+
+df = pd.DataFrame(data)
+df.set_index('Area', inplace=True)
+
+# 2. Visualization - Heatmap
+plt.figure(figsize=(12, 8))
+sns.set_theme(style="white")
+
+# Creating the heatmap
+heatmap = sns.heatmap(df, annot=True, fmt="d", cmap="YlGnBu", linewidths=.5, cbar_kws={'label': 'User Count (in 000s)'})
+
+plt.title('Telecom User Density Heatmap - Chennai Area-wise', fontsize=16, pad=20)
+plt.xlabel('Telecom Organization', fontsize=12)
+plt.ylabel('Chennai Areas', fontsize=12)
+
+plt.show()
