@@ -1,4 +1,6 @@
-import os, asyncio, nest_asyncio
+import os
+import asyncio
+import nest_asyncio
 from telegram import Update
 from telegram.ext import ApplicationBuilder, MessageHandler, filters, ContextTypes
 from groq import Groq
@@ -6,14 +8,13 @@ from groq import Groq
 nest_asyncio.apply()
 
 TELEGRAM_TOKEN = os.environ.get("8412781561:AAHsigyvWrSoJRZFi8T8T_zBf4LcEy3Kq2Q")
-GROQ_API_KEY = os.environ.get("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")
+GROQ_API_KEY = os.environ.get("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")
 
 client = Groq(api_key=GROQ_API_KEY)
 
-async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
+async def handle_message(update, context):
     user_message = update.message.text
     await context.bot.send_chat_action(chat_id=update.effective_chat.id, action="typing")
-
     response = client.chat.completions.create(
         model="llama3-8b-8192",
         messages=[
@@ -27,23 +28,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def main():
     app = ApplicationBuilder().token(TELEGRAM_TOKEN).build()
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    print("🤖 Bot is running!")
+    print("Bot is running!")
     await app.run_polling()
 
 asyncio.run(main())
-```
-
----
-
-### File 2 — `requirements.txt`
-```
-python-telegram-bot==20.7
-groq
-nest-asyncio
-```
-
----
-
-### File 3 — `Procfile`
-```
-worker: python main.py
