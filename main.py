@@ -5,8 +5,8 @@ from groq import Groq
 
 nest_asyncio.apply()
 
-TELEGRAM_TOKEN = os.environ.get("TELEGRAM_TOKEN")
-GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+TELEGRAM_TOKEN = os.environ.get("8412781561:AAHsigyvWrSoJRZFi8T8T_zBf4LcEy3Kq2Q")
+GROQ_API_KEY = os.environ.get("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")
 
 client = Groq(api_key=GROQ_API_KEY)
 
